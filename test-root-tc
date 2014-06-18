@@ -3,8 +3,4 @@
 set -o nounset
 set -o errexit
 
-
-./grunt-tc clean validate:js test:unit compile
-./sbt-tc "project root" test
-
-echo "Tested everything."
+echo "Do nothing, TeamCity requires a default branch, but this configuration only builds pull requests."

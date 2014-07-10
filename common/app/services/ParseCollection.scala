@@ -143,82 +143,55 @@ trait ParseCollection extends ExecutionContexts with QueryDefaults with Logging 
     }
   }
 
-  def getArticles(collectionItems: Seq[CollectionItem], edition: Edition): Future[List[Content]]
-    = getArticles(collectionItems, edition, hasParent=false)
-
-  //hasParent is here to break out of the recursive loop and make sure we only go one deep
-  def getArticles(collectionItems: Seq[CollectionItem], edition: Edition, hasParent: Boolean): Future[List[Content]] = {
-    if (collectionItems.isEmpty) {
-      Future.successful(Nil)
-    }
-    else {
-      val results = collectionItems.foldLeft(Future[List[Content]](Nil)) {
-        (foldListFuture, collectionItem) =>
-          lazy val supportingAsContent: Future[List[Content]] = {
-            lazy val supportingLinks: List[CollectionItem] = retrieveSupportingLinks(collectionItem)
-            if (!hasParent) getArticles(supportingLinks, edition, hasParent = true) else Future.successful(Nil)
-          }
-          if (collectionItem.isSnap) {
-            for {
-              contentList <- foldListFuture
-              supporting  <- supportingAsContent
-            } yield contentList :+ new Snap(collectionItem.id, supporting, collectionItem.webPublicationDate.getOrElse(DateTime.now), collectionItem.metaData.getOrElse(Map.empty))
-          }
-          else {
-            val content: Future[Option[ApiContent]] = getContentApiItemFromCollectionItem(collectionItem, edition)
-            supportingAsContent.onFailure {
-              case t: Throwable => log.warn("Supporting links: %s: %s".format(collectionItem.id, t.toString))
-            }
-
-            for {
-              contentList <- foldListFuture
-              itemResponse <- content
-              supporting <- supportingAsContent
-            } yield {
-              itemResponse
-                .map(Content(_, supporting, collectionItem.metaData))
-                .map(validateContent)
-                .map(contentList :+ _)
-                .getOrElse(contentList)
-            }
-          }
-      }
-      results
-    }
-  }
-
-  private def getContentApiItemFromCollectionItem(collectionItem: CollectionItem, edition: Edition): Future[Option[ApiContent]] = {
-    lazy val response = client.item(collectionItem.id, edition).showFields(showFieldsWithBodyQuery)
+  def getContentApiItems(ids: Set[String], edition: Edition): Future[Map[String, ApiContent]] = {
+    val response = client.search(edition: Edition).ids(ids.mkString(",")).showFields(showFieldsWithBodyQuery)
       .response
-      .map(Option.apply)
-      .recover {
-      case apiError: com.gu.openplatform.contentapi.ApiError if apiError.httpStatus == 404 => {
-        log.warn(s"Content API Error: 404 for ${collectionItem.id}")
-        None
-      }
-      case apiError: com.gu.openplatform.contentapi.ApiError if apiError.httpStatus == 410 => {
-        log.warn(s"Content API Error: 410 for ${collectionItem.id}")
-        None
-      }
+      .map(response => (response.results map { result =>
+      result.id -> result
+    }).toMap)
+
+    response onFailure {
       case jsonParseError: net.liftweb.json.JsonParser.ParseException => {
         ContentApiMetrics.ContentApiJsonParseExceptionMetric.increment()
-        throw jsonParseError
       }
       case mappingException: net.liftweb.json.MappingException => {
         ContentApiMetrics.ContentApiJsonMappingExceptionMetric.increment()
-        throw mappingException
       }
-      case t: Throwable => {
-        log.warn("%s: %s".format(collectionItem.id, t.toString))
-        throw t
-      }
-    }.map(_.flatMap(_.content))
-
-    if (FaciaToolCachedContentApiSwitch.isSwitchedOn) {
-      MemcachedFallback.withMemcachedFallBack(collectionItem.id, cacheDuration)(response)
     }
-    else {
-      response
+
+    response
+  }
+
+  def getArticles(collectionItems: Seq[CollectionItem], edition: Edition): Future[List[Content]] = {
+    val withSupportingLinks = collectionItems zip collectionItems.map(retrieveSupportingLinks)
+
+    for {
+      contentApiItems <- getContentApiItems((withSupportingLinks flatMap { case (collectionItem, supportingLinks) =>
+        collectionItem.id :: supportingLinks.map(_.id)
+      }).toSet, edition)
+    } yield withSupportingLinks.toList map { case (collectionItem, supportingLinks) =>
+      val supporting = supportingLinks map { link =>
+        Content(
+          contentApiItems(link.id),
+          Nil,
+          link.metaData
+        )
+      }
+
+      if (collectionItem.isSnap) {
+        new Snap(
+          collectionItem.id,
+          supporting,
+          collectionItem.webPublicationDate.getOrElse(DateTime.now),
+          collectionItem.metaData.getOrElse(Map.empty)
+        )
+      } else {
+        validateContent(Content(
+          contentApiItems(collectionItem.id),
+          supporting,
+          collectionItem.metaData
+        ))
+      }
     }
   }
 
@@ -226,8 +199,6 @@ trait ParseCollection extends ExecutionContexts with QueryDefaults with Logging 
     collectionItem.metaData.map(_.get("supporting").flatMap(_.asOpt[List[JsValue]]).getOrElse(Nil)
       .map(json => CollectionItem((json \ "id").as[String], (json \ "meta").asOpt[Map[String, JsValue]], (json \ "frontPublicationDate").asOpt[DateTime]))
     ).getOrElse(Nil)
-
-
 
   def executeContentApiQueryViaCache(queryString: String, edition: Edition): Future[Result] = {
     lazy val contentApiQuery = executeContentApiQuery(queryString, edition)

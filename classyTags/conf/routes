@@ -1,0 +1,9 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# For dev machines
+GET        /assets/*path        dev.DevAssetsController.at(path)
+
+GET        /dashboard           controllers.ClassyTagsController.dashboard()
+GET        /content             controllers.ClassyTagsController.content()

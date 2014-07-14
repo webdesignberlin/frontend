@@ -107,6 +107,8 @@ object Frontend extends Build with Prototypes {
 
   val onward = application("onward").dependsOn(commonWithTests).aggregate(common)
 
+  val classyTags = application("classyTags").dependsOn(commonWithTests).aggregate(common)
+
   val endtoend = application("fronts-endtoend-tests").settings(
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % "1.7.5",
@@ -185,6 +187,7 @@ object Frontend extends Build with Prototypes {
     commercial,
     onward,
     archive,
-    preview
+    preview,
+    classyTags
   )
 }

@@ -4,6 +4,9 @@ import conf.LiveContentApi
 import common._
 import model.Content
 import play.api.{ Application => PlayApp, GlobalSettings }
+import tags._
+
+case class classyTag(item: Content, superTags: Seq[Thing])
 
 object LatestContentAgent extends Logging with ExecutionContexts {
 

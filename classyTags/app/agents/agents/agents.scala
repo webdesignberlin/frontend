@@ -26,11 +26,11 @@ object LatestContentAgent extends Logging with ExecutionContexts {
   def update() {
     log.info("Updating latest content.")
 
-    val newFetchedContent = LiveContentApi.search(Edition.defaultEdition).response.map(_.results.map(Content(_)))
+    val newFetchedContent = LiveContentApi.search(Edition.defaultEdition).response.map(_.results.take(1).map(Content(_)))
 
     val searchedContent: Future[List[ClassyTag]] = newFetchedContent.flatMap( items => {
       val newTags: List[Future[ClassyTag]] = items.map(content => {
-        val keywords: Seq[String] = content.tags.filter(_.tagType == "keyword").map(_.webTitle)
+        val keywords: Seq[String] = content.tags.filter(_.tagType == "keyword").map(_.webTitle).take(1)
 
         val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
         fbResponses.map(thingsList => ClassyTag(content, Nil))
@@ -44,12 +44,20 @@ object LatestContentAgent extends Logging with ExecutionContexts {
     })
   }
 
+  def getCachedObjects(): Map[String, JsValue] = {
+    Map.empty
+  }
+
+  def addCache(keyword: String, value: JsValue) {
+    getCachedObjects() += (keyword -> value)
+  }
+
   def socialGraphSearch(keyword: String) : Future[Option[Thing]] = {
     WS.url("https://graph.facebook.com/search")
       .withQueryString(
         ("q", encode(keyword, "UTF-8")),
         ("type", "page"),
-        ("access_token", "")
+        ("access_token", "CAACEdEose0cBABwUxTmufdye26gn04iZAZCEN0jZBmeQIagXGPQKjaYdxeNKDKYWGOXE7wnchVAITCuVROZCZBN4xExZAn2xfEnpZBGPCD7Ve4EHl9M3dUSswWzEMll3OeOhGWLOaVGei6XMrZCLnSljZBTyneITi7HZBEcpeiyymbIZApZBfZAl7o6dyoEj0X4xMNx8ZD")
       )
       .get().map(resp => {
         val returnedData: JsValue = Json.parse(resp.body)

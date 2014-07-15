@@ -77,7 +77,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
       .withQueryString(
         ("q", encode(keyword, "UTF-8")),
         ("type", "page"),
-        ("access_token", "CAACEdEose0cBALwWfyPVa9vzFaufooZAXWM1PTI6ra6iD7y1Q9ULjmRRdRDuoTXESZBl0y8wR1AjYcalisZC0WdzcZApaJiZBa4IPGtmj0THLZBUKr8TuyokA6lNQpU8uISvl9nkZBWVV9MKaqModP7nQQAKGPq3pNrZAYFPnJa2ou5MgRXEZB9iygy0FZAC42ZAYEZD")
+        ("access_token", "CAACEdEose0cBAOTs7cfJ0AHEql6zFSmCJZCZBj8s8cPMz6SxFy0sNjDAXpSpgSL7a97UBIDCnH6sUf32qP5snUkPUO2UZBvTXWexNlhPQgWMZBr7GThA4uVHDh9N6H9HeH57Wr2JgOzFDyCbSZApEJoRrkk5O90tFY7LNZBR3wZCUfhyXnwN2bIG1dXcR9tsG0ZD")
       )
       .get()
 

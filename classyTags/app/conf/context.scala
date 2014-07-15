@@ -8,25 +8,25 @@ import scalaz._,Scalaz._
 import scalaz.syntax.monoid._
 import scalaz.std.map._
 
-case class ClassyTag(item: Content, superTags: Seq[Thing]) {
+case class ClassyTag(item: Content, superTags: Seq[Thing]) extends implicits.Collections {
   def getPeople: Seq[Person] = superTags.collect { case p: Person => p}
   def getPlaces: Seq[Place] = superTags.collect { case p: Place => p}
   def getEvents: Seq[Event] = superTags.collect { case e: Event => e}
 
-  def getPeopleGroupedByCategory: Map[String, Seq[Person]] = getPeople.groupBy(_.category)
-  def getPlacesGroupedByCategory: Map[String, Seq[Place]] = getPlaces.groupBy(_.category)
-  def getEventsGroupedByCategory: Map[String, Seq[Event]] = getEvents.groupBy(_.category)
+  def getPeopleGroupedByCategory: Map[String, Seq[Person]] = getPeople.groupBy(_.category).mapValues(_.distinctBy(_.name))
+  def getPlacesGroupedByCategory: Map[String, Seq[Place]] = getPlaces.groupBy(_.category).mapValues(_.distinctBy(_.name))
+  def getEventsGroupedByCategory: Map[String, Seq[Event]] = getEvents.groupBy(_.category).mapValues(_.distinctBy(_.name))
 }
 
 object ClassyTag {
-  def reduceTheEvents(tags: Seq[ClassyTag]) =
-    tags.map { _.getEventsGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
+  def reduceTheEvents(tags: Seq[ClassyTag]): Map[String,Seq[Event]] =
+    tags.flatMap(_.getEvents).groupBy(_.category)
 
   def reduceThePeople(tags: Seq[ClassyTag]) =
-    tags.map { _.getPeopleGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
+    tags.flatMap(_.getPeople).groupBy(_.category)
 
   def reduceThePlaces(tags: Seq[ClassyTag]) =
-    tags.map { _.getPlacesGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
+    tags.flatMap(_.getPlaces).groupBy(_.category)
 }
 
 object Management extends GuManagement {

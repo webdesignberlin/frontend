@@ -77,7 +77,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
       .withQueryString(
         ("q", encode(keyword, "UTF-8")),
         ("type", "page"),
-        ("access_token", "CAACEdEose0cBAOTs7cfJ0AHEql6zFSmCJZCZBj8s8cPMz6SxFy0sNjDAXpSpgSL7a97UBIDCnH6sUf32qP5snUkPUO2UZBvTXWexNlhPQgWMZBr7GThA4uVHDh9N6H9HeH57Wr2JgOzFDyCbSZApEJoRrkk5O90tFY7LNZBR3wZCUfhyXnwN2bIG1dXcR9tsG0ZD")
+        ("access_token", "CAACEdEose0cBAGLiZA39LfAz36ehMfyRnZCKHXYFGUs6W5BVSCswyxDLr4W06MGkFZBIOZCkKcueyDRk9G0Wo8cPpAdugpBm2gdjxM5wzHG810JMHVJXh2wWwCQSNus9lfH4JDw3FxcvyNcZCu9xC0JsqKsVMfRRWwOOiNOtwOZBPXXQ5MMOjAyuefqAeTZAZCgZD")
       )
       .get()
 
@@ -93,13 +93,17 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
           log.info(s"Adding content ${name} - ${category}")
 
-          createThing(name, category)
+          if (agent.get().exists(_.superTags.exists(_.name == name))) {
+            tags.Unknown(name, category)
+          } else {
+            createThing(name, category)
+          }
         })
       })
   }
 
   private val places = List("Country", "City")
-  private val people = List("Musician/band", "Politician", "Political party", "Athlete")
+  private val people = List("Politician", "Political party", "Athlete", "Public figure", "Business person")
   private val events = List("Sports event")
 
   def createThing(name: String, category: String) : tags.Thing = {

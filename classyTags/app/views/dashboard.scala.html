@@ -20,8 +20,15 @@
 
     <h1>Events Mentioned Today</h1>
     <ul>
-        @classyTags.flatMap(_.getEvents).map { event =>
-        <li>Name: @event.name</li>
+        @classyTags.map { classyTag =>
+            @classyTag.getEventsGroupedByCategory.map { case (category, people) =>
+                <li>
+                    <h3>@category</h3>
+                    @people.map { person =>
+                        @person.name
+                    }
+                </li>
+            }
         }
     </ul>
 </section>

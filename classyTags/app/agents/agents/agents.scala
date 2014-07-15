@@ -38,14 +38,14 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
       val searchedContent: Future[Seq[ClassyTag]] = {
 
-        val (work, rest) = contents.get.splitAt(5)
+        val (work, rest) = contents.get.splitAt(1)
 
         contents.update(rest)
 
 
         val responses: List[Future[ClassyTag]] = work.map(item => {
 
-          val keywords: Seq[String] = item.tags.filter(_.tagType == "keyword").map(_.webTitle).take(2)
+          val keywords: Seq[String] = item.tags.filter(_.tagType == "keyword").map(_.webTitle)
 
           val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
           fbResponses.map(thingsList => ClassyTag(item, thingsList))
@@ -98,7 +98,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
       })
   }
 
-  private val places = List("Country")
+  private val places = List("Country", "City")
   private val people = List("Musician/band", "Politician", "Political party", "Athlete")
   private val events = List("Sports event")
 

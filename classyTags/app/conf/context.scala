@@ -9,6 +9,10 @@ case class ClassyTag(item: Content, superTags: Seq[Thing]) {
   def getPeople: Seq[Person] = superTags.collect { case p: Person => p}
   def getPlaces: Seq[Place] = superTags.collect { case p: Place => p}
   def getEvents: Seq[Event] = superTags.collect { case e: Event => e}
+
+  def getPeopleGroupedByCategory: Map[String, Seq[Person]] = getPeople.groupBy(_.category)
+  def getPlacesGroupedByCategory: Map[String, Seq[Place]] = getPlaces.groupBy(_.category)
+  def getEventsGroupedByCategory: Map[String, Seq[Event]] = getEvents.groupBy(_.category)
 }
 
 object Management extends GuManagement {

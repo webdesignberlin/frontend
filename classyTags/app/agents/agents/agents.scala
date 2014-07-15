@@ -52,13 +52,20 @@ object LatestContentAgent extends Logging with ExecutionContexts {
   }
 
   def socialGraphSearch(keyword: String) : Future[Option[Thing]] = {
-    WS.url("https://graph.facebook.com/search")
+    log.info("finding supertag for " + keyword)
+
+    val resp = WS.url("https://graph.facebook.com/search")
       .withQueryString(
         ("q", encode(keyword, "UTF-8")),
         ("type", "page"),
-        ("access_token", "CAACEdEose0cBABwUxTmufdye26gn04iZAZCEN0jZBmeQIagXGPQKjaYdxeNKDKYWGOXE7wnchVAITCuVROZCZBN4xExZAn2xfEnpZBGPCD7Ve4EHl9M3dUSswWzEMll3OeOhGWLOaVGei6XMrZCLnSljZBTyneITi7HZBEcpeiyymbIZApZBfZAl7o6dyoEj0X4xMNx8ZD")
+        ("access_token", "CAACEdEose0cBALwWfyPVa9vzFaufooZAXWM1PTI6ra6iD7y1Q9ULjmRRdRDuoTXESZBl0y8wR1AjYcalisZC0WdzcZApaJiZBa4IPGtmj0THLZBUKr8TuyokA6lNQpU8uISvl9nkZBWVV9MKaqModP7nQQAKGPq3pNrZAYFPnJa2ou5MgRXEZB9iygy0FZAC42ZAYEZD")
       )
-      .get().map(resp => {
+      .get()
+
+    resp.onFailure { case failure: Throwable => log.error(failure.getMessage) }
+    resp.onSuccess { case success: Response => log.info(success.body) }
+
+    resp.map(resp => {
         val returnedData: JsValue = Json.parse(resp.body)
         val results: Seq[JsValue] = (returnedData \ "data" ).as[Seq[JsValue]]
         results.headOption.map ( result => {

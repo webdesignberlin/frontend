@@ -7,39 +7,35 @@
 <section>
     <h1>People Mentioned Today</h1>
     <ul>
-        @classyTags.map { classyTag =>
-            @classyTag.getPeopleGroupedByCategory.map { case (category, people) =>
-            <li>
-                <h3>@category</h3>
-                @people.map { person =>
-                @person.name
-                }
-            </li>
+        @ClassyTag.reduceThePeople(classyTags).map { case (category, events) =>
+        <li>
+            <h3>@category</h3>
+            @events.map { event =>
+            <p>@event.name</p>
             }
+        </li>
         }
     </ul>
 
     <h1>Places Mentioned Today</h1>
     <ul>
-        @classyTags.map { classyTag =>
-            @classyTag.getPlacesGroupedByCategory.map { case (category, places) =>
-            <li>
-                <h3>@category</h3>
-                @places.map { place =>
-                @place.name
-                }
-            </li>
+        @ClassyTag.reduceThePlaces(classyTags).map { case (category, events) =>
+        <li>
+            <h3>@category</h3>
+            @events.map { event =>
+            <p>@event.name</p>
             }
+        </li>
         }
     </ul>
 
     <h1>Events Mentioned Today</h1>
     <ul>
-        @ClassyTag.reduceTheMap(classyTags).map { case (category, events) =>
+        @ClassyTag.reduceTheEvents(classyTags).map { case (category, events) =>
             <li>
                 <h3>@category</h3>
                 @events.map { event =>
-                @event.name
+                <p>@event.name</p>
                 }
             </li>
         }

@@ -19,8 +19,14 @@ case class ClassyTag(item: Content, superTags: Seq[Thing]) {
 }
 
 object ClassyTag {
-  def reduceTheMap(tags: Seq[ClassyTag]) =
+  def reduceTheEvents(tags: Seq[ClassyTag]) =
     tags.map { _.getEventsGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
+
+  def reduceThePeople(tags: Seq[ClassyTag]) =
+    tags.map { _.getPeopleGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
+
+  def reduceThePlaces(tags: Seq[ClassyTag]) =
+    tags.map { _.getPlacesGroupedByCategory }.reduce((a,b) => intersectWith(a, b)(_ ++ _))
 }
 
 object Management extends GuManagement {

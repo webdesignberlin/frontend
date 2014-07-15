@@ -5,15 +5,19 @@ import common._
 import model.Content
 import play.api.{ Application => PlayApp, GlobalSettings }
 import tags._
+import scala.concurrent.Future
+import play.api.libs.ws._
+import java.net.URLEncoder.encode
+import play.api.libs.json._
 
-case class classyTag(item: Content, superTags: Seq[Thing])
+case class ClassyTag(item: Content, superTags: Seq[Thing])
 
 object LatestContentAgent extends Logging with ExecutionContexts {
 
   // maps editions to latest content
-  private val agent = AkkaAgent[List[Content]](Nil)
+  private val agent = AkkaAgent[List[ClassyTag]](Nil)
 
-  def latestContent: Seq[Content] = agent()
+  def latestContent: Seq[ClassyTag] = agent()
 
   def stop() {
     agent.close()
@@ -24,9 +28,37 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
     val newFetchedContent = LiveContentApi.search(Edition.defaultEdition).response.map(_.results.map(Content(_)))
 
-    newFetchedContent.map( items =>
-        agent.update(items)
-    )
+    val searchedContent: Future[List[ClassyTag]] = newFetchedContent.flatMap( items => {
+      val newTags: List[Future[ClassyTag]] = items.map(content => {
+        val keywords: Seq[String] = content.tags.filter(_.tagType == "keyword").map(_.webTitle)
+
+        val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
+        fbResponses.map(thingsList => ClassyTag(content, Nil))
+      })
+
+      Future.sequence(newTags)
+    })
+
+    searchedContent.map( (superTags: List[ClassyTag]) => {
+      agent.update(superTags)
+    })
+  }
+
+  def socialGraphSearch(keyword: String) : Future[Option[Thing]] = {
+    WS.url("https://graph.facebook.com/search")
+      .withQueryString(
+        ("q", encode(keyword, "UTF-8")),
+        ("type", "page"),
+        ("access_token", "")
+      )
+      .get().map(resp => {
+        val returnedData: JsValue = Json.parse(resp.body)
+        val results: Seq[JsValue] = (returnedData \ "data" ).as[Seq[JsValue]]
+        results.headOption.map ( result => {
+          val name: String = (result \ "name").as[String]
+          new tags.Event(name)
+        })
+      })
   }
 }
 

@@ -7,7 +7,7 @@ import play.api.libs.json.{Json, JsArray}
 object ClassyTagsController extends Controller with Logging with ExecutionContexts {
 
   implicit val itemWrites = Json.writes[LittleItem]
-  case class LittleItem(url: String, tags: Seq[String])
+  case class LittleItem(url: String, tags: Seq[String], supertags: Seq[String])
 
   def dashboard() = Action { implicit request =>
     Ok("in")
@@ -15,8 +15,8 @@ object ClassyTagsController extends Controller with Logging with ExecutionContex
 
   def content() = Action { implicit request =>
     JsonComponent(
-      "items" -> JsArray(feed.LatestContentAgent.latestContent.map( content => {
-        val littleItem = LittleItem(content.url, content.tags.filter(_.tagType == "keyword").map(_.webTitle))
+      "items" -> JsArray(feed.LatestContentAgent.latestContent.map( classyTag => {
+        val littleItem = LittleItem(classyTag.item.url, classyTag.item.tags.filter(_.tagType == "keyword").map(_.webTitle), classyTag.superTags.map(_.name))
         Json.toJson(littleItem)
       }))
     )

@@ -2,9 +2,10 @@ package tags
 
 trait Thing {
   def thingType: String
+  def name: String
 }
 
-class Place(val city: String) extends Thing {
+class Place(val name: String) extends Thing {
   override lazy val thingType = "Place"
 }
 

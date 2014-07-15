@@ -8,3 +8,4 @@ sealed trait Thing {
 case class Place(name: String, category: String) extends Thing
 case class Event(name: String, category: String) extends Thing
 case class Person(name: String, category: String) extends Thing
+case class Unknown(name: String, category: String) extends Thing

@@ -12,8 +12,11 @@ import play.api.libs.json._
 
 object LatestContentAgent extends Logging with ExecutionContexts {
 
-  // maps editions to latest content
+
   private val agent = AkkaAgent[List[ClassyTag]](Nil)
+
+  private val contents = AkkaAgent[List[Content]](Nil)
+
 
   def latestContent: Seq[ClassyTag] = agent()
 
@@ -24,22 +27,38 @@ object LatestContentAgent extends Logging with ExecutionContexts {
   def update() {
     log.info("Updating latest content.")
 
-    val newFetchedContent = LiveContentApi.search(Edition.defaultEdition).response.map(_.results.take(1).map(Content(_)))
-
-    val searchedContent: Future[List[ClassyTag]] = newFetchedContent.flatMap( items => {
-      val newTags: List[Future[ClassyTag]] = items.map(content => {
-        val keywords: Seq[String] = content.tags.filter(_.tagType == "keyword").map(_.webTitle).take(1)
-
-        val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
-        fbResponses.map(thingsList => ClassyTag(content, thingsList))
+    if (contents.get.size == 0 ) {
+      LiveContentApi.search(Edition.defaultEdition).pageSize(100).response.map( resp => {
+        contents.update(resp.results.map(Content(_)))
       })
+    } else {
 
-      Future.sequence(newTags)
-    })
+      log.info("Fetching keywords.")
 
-    searchedContent.map( (superTags: List[ClassyTag]) => {
-      agent.update(superTags)
-    })
+
+      val searchedContent: Future[Seq[ClassyTag]] = {
+
+        val (work, rest) = contents.get.splitAt(5)
+
+        contents.update(rest)
+
+
+        val responses: List[Future[ClassyTag]] = work.map(item => {
+
+          val keywords: Seq[String] = item.tags.filter(_.tagType == "keyword").map(_.webTitle).take(2)
+
+          val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
+          fbResponses.map(thingsList => ClassyTag(item, thingsList))
+        })
+
+        Future.sequence(responses)
+      }
+
+      searchedContent.map( (superTags: Seq[ClassyTag]) => {
+        agent.send( current =>  current ++ superTags)
+      })
+    }
+
   }
 
   def getCachedObjects(): Map[String, JsValue] = {
@@ -63,7 +82,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
       .get()
 
     resp.onFailure { case failure: Throwable => log.error(failure.getMessage) }
-    resp.onSuccess { case success: Response => log.info(success.body) }
+    resp.onSuccess { case _ => log.info("success") }
 
     resp.map(resp => {
         val returnedData: JsValue = Json.parse(resp.body)
@@ -74,9 +93,23 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
           log.info(s"Adding content ${name} - ${category}")
 
-          new tags.Event(name, category)
+          createThing(name, category)
         })
       })
+  }
+
+  private val places = List("Country")
+  private val people = List("Musician/band", "Politician", "Political party", "Athlete")
+  private val events = List("Sports event")
+
+  def createThing(name: String, category: String) : tags.Thing = {
+
+    category match {
+      case _ if places.contains(category) => tags.Place(name, category)
+      case _ if people.contains(category) => tags.Person(name, category)
+      case _ if events.contains(category) => tags.Event(name, category)
+      case _ => tags.Unknown(name, category)
+    }
   }
 }
 

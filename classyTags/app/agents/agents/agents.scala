@@ -33,7 +33,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
         val keywords: Seq[String] = content.tags.filter(_.tagType == "keyword").map(_.webTitle).take(1)
 
         val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
-        fbResponses.map(thingsList => ClassyTag(content, Nil))
+        fbResponses.map(thingsList => ClassyTag(content, thingsList))
       })
 
       Future.sequence(newTags)
@@ -49,7 +49,8 @@ object LatestContentAgent extends Logging with ExecutionContexts {
   }
 
   def addCache(keyword: String, value: JsValue) {
-    getCachedObjects() += (keyword -> value)
+    val newMap: Map[String, JsValue] = getCachedObjects() + (keyword -> value)
+    JsObject(newMap.toSeq)
   }
 
   def socialGraphSearch(keyword: String) : Future[Option[Thing]] = {
@@ -64,6 +65,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
         val results: Seq[JsValue] = (returnedData \ "data" ).as[Seq[JsValue]]
         results.headOption.map ( result => {
           val name: String = (result \ "name").as[String]
+          val category: String = (result \ "category").as[String]
           new tags.Event(name)
         })
       })

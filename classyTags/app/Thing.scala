@@ -1,18 +1,9 @@
 package tags
 
-trait Thing {
-  def thingType: String
+sealed trait Thing {
   def name: String
 }
 
-class Place(val name: String) extends Thing {
-  override lazy val thingType = "Place"
-}
-
-class Event(val name: String) extends Thing {
-  override lazy val thingType = "Event"
-}
-
-class Person(val name: String) extends Thing {
-  override lazy val thingType = "Person"
-}
+case class Place(name: String) extends Thing
+case class Event(name: String) extends Thing
+case class Person(name: String) extends Thing

@@ -64,7 +64,10 @@ object LatestContentAgent extends Logging with ExecutionContexts {
         results.headOption.map ( result => {
           val name: String = (result \ "name").as[String]
           val category: String = (result \ "category").as[String]
-          new tags.Event(name)
+
+          log.info(s"Adding content ${name} - ${category}")
+
+          new tags.Event(name, category)
         })
       })
   }
@@ -74,21 +77,21 @@ trait TagAgentsLifecycle extends GlobalSettings {
   override def onStart(app: PlayApp) {
     super.onStart(app)
 
-    Jobs.deschedule("AgentsRefreshJob")
+    //Jobs.deschedule("AgentsRefreshJob")
 
     // fire every min
-    Jobs.schedule("OnwardJourneyAgentsRefreshJob", "0 * * * * ?") {
-      LatestContentAgent.update()
-    }
+    //Jobs.schedule("AgentsRefreshJob", "0 * * * * ?") {
+      //LatestContentAgent.update()
+    //}
 
 
     AkkaAsync {
-      LatestContentAgent.update()
+      //LatestContentAgent.update()
     }
   }
 
   override def onStop(app: PlayApp) {
-    Jobs.deschedule("AgentsRefreshJob")
+    //Jobs.deschedule("AgentsRefreshJob")
 
     LatestContentAgent.stop()
 

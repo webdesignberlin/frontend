@@ -6,22 +6,43 @@
 <section>
     <h1>People Mentioned Today</h1>
     <ul>
-        @classyTags.flatMap(_.getPeople).map { person =>
-            <li>Name: @person.name</li>
+        @classyTags.map { classyTag =>
+            @classyTag.getPeopleGroupedByCategory.map { case (category, people) =>
+            <li>
+                <h3>@category</h3>
+                @people.map { person =>
+                @person.name
+                }
+            </li>
+            }
         }
     </ul>
 
     <h1>Places Mentioned Today</h1>
     <ul>
-        @classyTags.flatMap(_.getPlaces).map { place =>
-        <li>Name: @place.name</li>
+        @classyTags.map { classyTag =>
+            @classyTag.getPlacesGroupedByCategory.map { case (category, places) =>
+            <li>
+                <h3>@category</h3>
+                @places.map { place =>
+                @place.name
+                }
+            </li>
+            }
         }
     </ul>
 
     <h1>Events Mentioned Today</h1>
     <ul>
-        @classyTags.flatMap(_.getEvents).map { event =>
-        <li>Name: @event.name</li>
+        @classyTags.map { classyTag =>
+            @classyTag.getEventsGroupedByCategory.map { case (category, events) =>
+                <li>
+                    <h3>@category</h3>
+                    @events.map { event =>
+                        @event.name
+                    }
+                </li>
+            }
         }
     </ul>
 </section>

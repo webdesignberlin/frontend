@@ -2,7 +2,6 @@
 @import conf.Switches._
 @import tags._
 
-
 <section>
     <h1>People Mentioned Today</h1>
     <ul>
@@ -34,15 +33,13 @@
 
     <h1>Events Mentioned Today</h1>
     <ul>
-        @classyTags.map { classyTag =>
-            @classyTag.getEventsGroupedByCategory.map { case (category, events) =>
-                <li>
-                    <h3>@category</h3>
-                    @events.map { event =>
-                        @event.name
-                    }
-                </li>
-            }
+        @ClassyTag.reduceTheMap(classyTags).map { case (category, events) =>
+            <li>
+                <h3>@category</h3>
+                @events.map { event =>
+                @event.name
+                }
+            </li>
         }
     </ul>
 </section>

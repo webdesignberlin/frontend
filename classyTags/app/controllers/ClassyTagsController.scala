@@ -18,9 +18,16 @@ object ClassyTagsController extends Controller with Logging with ExecutionContex
   def content() = Action { implicit request =>
     JsonComponent(
       "items" -> JsArray(feed.LatestContentAgent.latestContent.map( classyTag => {
-        val littleItem = LittleItem(classyTag.item.url, classyTag.item.tags.filter(_.tagType == "keyword").map(_.webTitle), classyTag.superTags.map(_.name))
+        val littleItem = LittleItem(classyTag.item.url,
+            classyTag.item.tags.filter(_.tagType == "keyword").map(_.webTitle),
+            classyTag.superTags.map(superTag => s"${superTag.name} - ${superTag.category}"))
         Json.toJson(littleItem)
       }))
     )
+  }
+
+  def update() = Action { implicit request =>
+    feed.LatestContentAgent.update()
+    Ok("updated")
   }
 }

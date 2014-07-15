@@ -7,3 +7,4 @@ GET        /assets/*path        dev.DevAssetsController.at(path)
 
 GET        /dashboard           controllers.ClassyTagsController.dashboard()
 GET        /content             controllers.ClassyTagsController.content()
+GET        /update              controllers.ClassyTagsController.update()

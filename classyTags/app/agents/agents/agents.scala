@@ -38,14 +38,14 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
       val searchedContent: Future[Seq[ClassyTag]] = {
 
-        val (work, rest) = contents.get.splitAt(3)
+        val (work, rest) = contents.get.splitAt(5)
 
         contents.update(rest)
 
 
         val responses: List[Future[ClassyTag]] = work.map(item => {
 
-          val keywords: Seq[String] = item.tags.filter(_.tagType == "keyword").map(_.webTitle).take(1)
+          val keywords: Seq[String] = item.tags.filter(_.tagType == "keyword").map(_.webTitle).take(2)
 
           val fbResponses: Future[Seq[Thing]] = Future.sequence(keywords.map(keyword => socialGraphSearch(keyword))).map(_.flatten)
           fbResponses.map(thingsList => ClassyTag(item, thingsList))
@@ -82,7 +82,7 @@ object LatestContentAgent extends Logging with ExecutionContexts {
       .get()
 
     resp.onFailure { case failure: Throwable => log.error(failure.getMessage) }
-    resp.onSuccess { case success: Response => log.info(success.body) }
+    resp.onSuccess { case _ => log.info("success") }
 
     resp.map(resp => {
         val returnedData: JsValue = Json.parse(resp.body)
@@ -93,9 +93,23 @@ object LatestContentAgent extends Logging with ExecutionContexts {
 
           log.info(s"Adding content ${name} - ${category}")
 
-          new tags.Event(name, category)
+          createThing(name, category)
         })
       })
+  }
+
+  private val places = List("Country")
+  private val people = List("Musician/band", "Politician", "Political party", "Athlete")
+  private val events = List("Sports event")
+
+  def createThing(name: String, category: String) : tags.Thing = {
+
+    category match {
+      case _ if places.contains(category) => tags.Place(name, category)
+      case _ if people.contains(category) => tags.Person(name, category)
+      case _ if events.contains(category) => tags.Event(name, category)
+      case _ => tags.Unknown(name, category)
+    }
   }
 }
 

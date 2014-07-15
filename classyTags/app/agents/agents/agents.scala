@@ -1,6 +1,6 @@
 package feed
 
-import conf.LiveContentApi
+import conf.{ClassyTag, LiveContentApi}
 import common._
 import model.Content
 import play.api.{ Application => PlayApp, GlobalSettings }
@@ -9,8 +9,6 @@ import scala.concurrent.Future
 import play.api.libs.ws._
 import java.net.URLEncoder.encode
 import play.api.libs.json._
-
-case class ClassyTag(item: Content, superTags: Seq[Thing])
 
 object LatestContentAgent extends Logging with ExecutionContexts {
 

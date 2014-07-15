@@ -10,4 +10,18 @@
             <li>Name: @person.name</li>
         }
     </ul>
+
+    <h1>Places Mentioned Today</h1>
+    <ul>
+        @classyTags.flatMap(_.getPlaces).map { place =>
+        <li>Name: @place.name</li>
+        }
+    </ul>
+
+    <h1>Events Mentioned Today</h1>
+    <ul>
+        @classyTags.flatMap(_.getEvents).map { event =>
+        <li>Name: @event.name</li>
+        }
+    </ul>
 </section>

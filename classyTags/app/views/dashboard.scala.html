@@ -1,2 +1,13 @@
-@()(implicit request: RequestHeader)
+@(classyTags: Seq[ClassyTag])(implicit request: RequestHeader)
 @import conf.Switches._
+@import tags._
+
+
+<section>
+    <h1>People Mentioned Today</h1>
+    <ul>
+        @classyTags.flatMap(_.getPeople).map { person =>
+            <li>Name: @person.name</li>
+        }
+    </ul>
+</section>

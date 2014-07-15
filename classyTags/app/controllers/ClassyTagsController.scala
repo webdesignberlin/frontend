@@ -1,5 +1,6 @@
 package controllers
 
+import feed.LatestContentAgent
 import play.api.mvc.{ Content => _, _ }
 import common.{JsonComponent, Logging, ExecutionContexts}
 import play.api.libs.json.{Json, JsArray}
@@ -10,7 +11,8 @@ object ClassyTagsController extends Controller with Logging with ExecutionContex
   case class LittleItem(url: String, tags: Seq[String], supertags: Seq[String])
 
   def dashboard() = Action { implicit request =>
-    Ok("in")
+    val latestContent = LatestContentAgent.latestContent
+    Ok(views.html.dashboard(latestContent))
   }
 
   def content() = Action { implicit request =>

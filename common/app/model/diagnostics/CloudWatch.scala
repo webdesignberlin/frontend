@@ -70,22 +70,30 @@ trait CloudWatch extends Logging {
   def putMetrics(metrics: List[FrontendMetric], dimensions: List[Dimension]): Unit = {
     for {
       metric <- metrics
-      dataPointGroup <- metric.getAndResetDataPoints.grouped(20)
     } {
-      val request = new PutMetricDataRequest()
-        .withNamespace("Application")
-        .withMetricData {
-          for (dataPoint <- dataPointGroup) yield {
-            val metricDatum = new MetricDatum()
-              .withValue(dataPoint.value)
-              .withUnit(metric.metricUnit)
-              .withMetricName(metric.name)
-              .withDimensions(dimensions)
+      val allDataPoints: List[DataPoint] = metric.getAndResetDataPoints
 
-            dataPoint.time.fold(metricDatum) { t => metricDatum.withTimestamp(t.toDate)}
+      if (allDataPoints.isEmpty) {
+        putDefaultMetric(metric, dimensions)
+      }
+      else {
+        for (dataPointGroup <- allDataPoints.grouped(20)) {
+          val request = new PutMetricDataRequest()
+            .withNamespace("Application")
+            .withMetricData {
+            for (dataPoint <- dataPointGroup) yield {
+              val metricDatum = new MetricDatum()
+                .withValue(dataPoint.value)
+                .withUnit(metric.metricUnit)
+                .withMetricName(metric.name)
+                .withDimensions(dimensions)
+
+              dataPoint.time.fold(metricDatum) { t => metricDatum.withTimestamp(t.toDate)}
+            }
           }
+          CloudWatch.cloudwatch.foreach(_.putMetricDataAsync(request, AsyncHandlerForMetric(metric, dataPointGroup)))
         }
-      CloudWatch.cloudwatch.foreach(_.putMetricDataAsync(request, AsyncHandlerForMetric(metric, dataPointGroup)))
+      }
     }
   }
 

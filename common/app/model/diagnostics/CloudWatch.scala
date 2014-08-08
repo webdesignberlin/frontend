@@ -89,6 +89,20 @@ trait CloudWatch extends Logging {
     }
   }
 
+  def putDefaultMetric(metric: FrontendMetric, dimensions: List[Dimension]): Unit = {
+    val defaultDataPoint: DataPoint = metric.getDefaultMetric
+    val request = new PutMetricDataRequest()
+      .withNamespace("Application")
+      .withMetricData(
+        new MetricDatum()
+          .withValue(defaultDataPoint.value)
+          .withUnit(metric.metricUnit)
+          .withMetricName(metric.name)
+          .withDimensions(dimensions)
+      )
+    CloudWatch.cloudwatch.foreach(_.putMetricDataAsync(request, AsyncHandlerForMetric(metric, Nil)))
+  }
+
 }
 
 object CloudWatch extends CloudWatch

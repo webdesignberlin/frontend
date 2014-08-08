@@ -18,11 +18,14 @@ trait FrontendMetric {
   val metricUnit: StandardUnit
   def getAndResetDataPoints: List[DataPoint]
   def putDataPoints(points: List[DataPoint]): Future[List[DataPoint]]
+  def getDefaultMetric: DataPoint
 }
 
 case class DurationMetric(name: String, metricUnit: StandardUnit) extends FrontendMetric {
 
   private val dataPoints: Agent[List[DataPoint]] = AkkaAgent(List[DurationDataPoint]())
+
+  def getDefaultMetric: DataPoint = DurationDataPoint(0L, Option(DateTime.now))
 
   def getDataPoints: List[DataPoint] = dataPoints.get()
 

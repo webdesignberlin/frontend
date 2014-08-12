@@ -1,8 +1,11 @@
 package model.commercial
 
+import java.lang.System.currentTimeMillis
+
 import com.ning.http.client.{Response => AHCResponse}
 import com.ning.http.util.AsyncHttpProviderUtils.DEFAULT_CHARSET
 import common.{ExecutionContexts, Logging}
+import conf.Switch
 import model.diagnostics.CloudWatch
 import play.api.libs.json._
 import play.api.libs.ws.WS
@@ -10,8 +13,6 @@ import play.api.libs.ws.WS
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-// TODO switch
-// TODO transform string before parsing
 object FeedReader extends ExecutionContexts with Logging {
 
   import play.api.Play.current
@@ -22,7 +23,7 @@ object FeedReader extends ExecutionContexts with Logging {
   }
 
   private def readBody(feedName: String, url: String, characterEncoding: String, loadTimeout: Duration): Future[Option[String]] = {
-    val start = System.currentTimeMillis
+    val start = currentTimeMillis
     val futureResponse = WS.url(url) withRequestTimeout loadTimeout.toMillis.toInt get()
 
     futureResponse onFailure {
@@ -33,7 +34,7 @@ object FeedReader extends ExecutionContexts with Logging {
 
     futureResponse map { response =>
       if (response.status == 200) {
-        recordLoad(feedName, System.currentTimeMillis - start)
+        recordLoad(feedName, currentTimeMillis - start)
         val body = {
           // look at documentation of response.body to see why this is necessary
           if (characterEncoding == DEFAULT_CHARSET) {
@@ -51,19 +52,25 @@ object FeedReader extends ExecutionContexts with Logging {
     }
   }
 
-  private def read[M](feedName: String, url: String, characterEncoding: String, loadTimeout: Duration)(parse: String => Seq[M]): Future[Seq[M]] = {
-    readBody(feedName, url, characterEncoding, loadTimeout) map {
-      _ map { body =>
-        val model = parse(body)
-        log.info(s"Loaded ${model.size} $feedName from $url")
-        model
-      } getOrElse Nil
+  private def read[M](switch: Switch, feedName: String, url: String, characterEncoding: String, loadTimeout: Duration)
+                     (parse: String => Seq[M]): Future[Seq[M]] = {
+    if (switch.isSwitchedOn) {
+      readBody(feedName, url, characterEncoding, loadTimeout) map {
+        _ map { body =>
+          val model = parse(body)
+          log.info(s"Loaded ${model.size} $feedName from $url")
+          model
+        } getOrElse Nil
+      }
+    } else {
+      log.warn(s"Feed for $feedName switched off")
+      Future.successful(Nil)
     }
   }
 
-  def readFromJson[M](feedName: String, url: String, characterEncoding: String = DEFAULT_CHARSET, loadTimeout: Duration = 2.seconds)
+  def readFromJson[M](switch: Switch, feedName: String, url: String, characterEncoding: String = DEFAULT_CHARSET, loadTimeout: Duration = 2.seconds)
                      (implicit reads: Reads[M]): Future[Seq[M]] = {
-    read(feedName, url, characterEncoding, loadTimeout) { body =>
+    read(switch, feedName, url, characterEncoding, loadTimeout) { body =>
       Json.parse(body).validate[Seq[M]] match {
         case s: JsSuccess[Seq[M]] => s.value
         case e: JsError =>

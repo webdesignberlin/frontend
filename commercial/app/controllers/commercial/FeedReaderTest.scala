@@ -1,6 +1,8 @@
 package controllers.commercial
 
 import common.ExecutionContexts
+import conf.{Switches, Switch}
+import dispatch.url
 import model.commercial.FeedReader
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Reads}
@@ -17,7 +19,7 @@ object FeedReaderTest extends Controller with ExecutionContexts {
 
   def doIt() = Action.async { implicit request =>
     val url = "https://www.eventbrite.com/json/organizer_list_events?app_key=ZUS3L55RMIF6WC7OTI&id=684756979"
-    val futureResult = FeedReader.readFromJson[Obj]("test", url, loadTimeout = 90.seconds)
+    val futureResult = FeedReader.readFromJson[Obj](Switches.AudienceScienceGatewaySwitch, "test", url, loadTimeout = 90.seconds)
 
     futureResult map { result =>
       Ok(result.headOption.map(_.name).getOrElse("Empty"))

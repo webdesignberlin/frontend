@@ -17,69 +17,73 @@ object FeedReader extends ExecutionContexts with Logging {
 
   import play.api.Play.current
 
-  private def recordLoad(feedName: String, duration: Long) {
-    val key = s"${feedName.toLowerCase.replaceAll("\\s+", "-")}-feed-load-time"
+  implicit def duration2Millis(d: Duration): Int = d.toMillis.toInt
+
+  private def recordLoad(feed: Feed, duration: Long) {
+    val key = s"${feed.name.toLowerCase.replaceAll("\\s+", "-")}-feed-load-time"
     CloudWatch.put("Commercial", Map(s"$key" -> duration.toDouble))
   }
 
-  private def readBody(feedName: String, url: String, characterEncoding: String, loadTimeout: Duration): Future[Option[String]] = {
+  private def readBody(feed: Feed): Future[Option[String]] = {
     val start = currentTimeMillis
-    val futureResponse = WS.url(url) withRequestTimeout loadTimeout.toMillis.toInt get()
+    val futureResponse = WS.url(feed.url) withRequestTimeout feed.loadTimeout get()
 
+    // TODO return value on failure
     futureResponse onFailure {
       case e: Exception =>
-        log.error(s"Loading $feedName from $url failed: ${e.getMessage}")
-        recordLoad(feedName, -1)
+        log.error(s"Loading ${feed.name} from ${feed.url} failed: ${e.getMessage}")
+        recordLoad(feed, -1)
     }
 
     futureResponse map { response =>
       if (response.status == 200) {
-        recordLoad(feedName, currentTimeMillis - start)
+        recordLoad(feed, currentTimeMillis - start)
         val body = {
           // look at documentation of response.body to see why this is necessary
-          if (characterEncoding == DEFAULT_CHARSET) {
+          if (feed.characterEncoding == DEFAULT_CHARSET) {
             response.body
           } else {
-            response.underlying[AHCResponse].getResponseBody(characterEncoding)
+            response.underlying[AHCResponse].getResponseBody(feed.characterEncoding)
           }
-        }
+          }
         Some(body)
       } else {
-        log.error(s"Loading $feedName ads from $url failed: status ${response.status} [${response.statusText}]")
-        recordLoad(feedName, -1)
+        log.error(s"Loading ${feed.name} ads from ${feed.url} failed: status ${response.status} [${response.statusText}]")
+        recordLoad(feed, -1)
         None
+        }
       }
-    }
   }
 
-  private def read[M](switch: Switch, feedName: String, url: String, characterEncoding: String, loadTimeout: Duration)
-                     (parse: String => Seq[M]): Future[Seq[M]] = {
-    if (switch.isSwitchedOn) {
-      readBody(feedName, url, characterEncoding, loadTimeout) map {
+  private def read[M](feed: Feed)(parse: String => Seq[M]): Future[Seq[M]] = {
+    if (feed.switch.isSwitchedOn) {
+      readBody(feed) map {
         _ map { body =>
           val model = parse(body)
-          log.info(s"Loaded ${model.size} $feedName from $url")
+          log.info(s"Loaded ${model.size} ${feed.name} from ${feed.url}")
           model
         } getOrElse Nil
       }
     } else {
-      log.warn(s"Feed for $feedName switched off")
+      log.warn(s"Feed for ${feed.name} switched off")
       Future.successful(Nil)
     }
   }
 
-  def readFromJson[M](switch: Switch, feedName: String, url: String, characterEncoding: String = DEFAULT_CHARSET, loadTimeout: Duration = 2.seconds)
-                     (implicit reads: Reads[M]): Future[Seq[M]] = {
-    read(switch, feedName, url, characterEncoding, loadTimeout) { body =>
+  def readFromJson[M](feed: Feed)(implicit reads: Reads[M]): Future[Seq[M]] = {
+    read(feed) { body =>
       Json.parse(body).validate[Seq[M]] match {
         case s: JsSuccess[Seq[M]] => s.value
         case e: JsError =>
-          log.error(s"Parsing $url failed: ${e.errors.map { case (path, errs) => s"$path: ${errs.head.message}"}.mkString}")
+          log.error(s"Parsing ${feed.name} from ${feed.url} failed: ${e.errors.map { case (path, errs) => s"$path: ${errs.head.message}"}.mkString}")
           Nil
       }
     }
   }
 
   // TODO
-  def readFromXml[M](url: String, characterEncoding: String = DEFAULT_CHARSET, loadTimeout: Duration = 2.seconds): Future[Option[M]] = Future.successful(None)
+  def readFromXml[M](feed: Feed): Future[Option[M]] = Future.successful(None)
 }
+
+
+case class Feed(switch: Switch, name: String, url: String, characterEncoding: String = DEFAULT_CHARSET, loadTimeout: Duration = 2.seconds)

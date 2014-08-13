@@ -55,8 +55,3 @@ GET        /commercial/books/book                                        control
 # Content API offers
 GET        /commercial/capi.json                                         controllers.commercial.ContentApiOffers.itemsJson
 GET        /commercial/capi                                              controllers.commercial.ContentApiOffers.itemsHtml
-
-
-
-
-GET        /commercial/read                                              controllers.commercial.FeedReaderTest.doIt

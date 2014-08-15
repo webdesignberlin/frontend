@@ -18,6 +18,8 @@ import com.amazonaws.auth.AWSSessionCredentials
 import common.S3Metrics.S3ClientExceptionsMetric
 import com.gu.googleauth.UserIdentity
 
+import scala.util.Try
+
 trait S3 extends Logging {
 
   lazy val bucket = Configuration.aws.bucket
@@ -129,9 +131,10 @@ object S3FrontsApi extends S3 {
   def putBlock(id: String, json: String) =
     putPublic(s"$location/collection/$id/collection.json", json, "application/json")
 
-  def archive(id: String, json: String, identity: UserIdentity) = {
+  def archive(id: String, json: String, identity: UserIdentity): Option[String] = {
     val now = DateTime.now
-    putPrivate(s"$location/history/collection/${now.year.get}/${"%02d".format(now.monthOfYear.get)}/${"%02d".format(now.dayOfMonth.get)}/$id/${now}.${identity.email}.json", json, "application/json")
+    val s3Path: String = s"$location/history/collection/${now.year.get}/${"%02d".format(now.monthOfYear.get)}/${"%02d".format(now.dayOfMonth.get)}/$id/${now}.${identity.email}.json"
+    Try(putPrivate(s3Path, json, "application/json")).map(_ => s3Path).toOption
   }
 
   def putMasterConfig(json: String) =

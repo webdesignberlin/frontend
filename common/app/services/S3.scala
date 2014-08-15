@@ -99,6 +99,7 @@ trait S3 extends Logging {
       client.foreach(_.putObject(request))
     } catch {
       case e: Exception =>
+        log.error(s"Error putting $key to S3: $e")
         S3ClientExceptionsMetric.increment()
         throw e
     }
